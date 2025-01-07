@@ -8,34 +8,60 @@ import cv2
 import sys 
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
+from kalman_filter import KalmanFilter
 
 class Tracker:
     def __init__(self, model_path):
         self.model = YOLO(model_path) 
         self.tracker = sv.ByteTrack()
+        self.kalman_filters = {}
 
-    def add_position_to_tracks(sekf,tracks):
+    def add_kalman_filter(self, object, track_id):
+        if object not in self.kalman_filters:
+            self.kalman_filters[object] = {}
+        if track_id not in self.kalman_filters[object]:
+            self.kalman_filters[object][track_id] = KalmanFilter()
+
+
+    def update_with_kalman_filter(self, object, frame_num, track_id, bbox):
+        x, y = get_center_of_bbox(bbox) if object == "ball" else get_foot_position(bbox)
+        self.add_kalman_filter(object, track_id)
+
+        kalman_filter = self.kalman_filters[object][track_id]
+        pred = kalman_filter.predict()
+        kalman_filter.correct(x, y)
+
+        return pred.tolist()
+
+    def add_position_to_tracks(self,tracks):
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
                     bbox = track_info['bbox']
-                    if object == 'ball':
-                        position= get_center_of_bbox(bbox)
-                    else:
-                        position = get_foot_position(bbox)
+                    position = self.update_with_kalman_filter(object, frame_num, track_id, bbox)
                     tracks[object][frame_num][track_id]['position'] = position
 
-    def interpolate_ball_positions(self,ball_positions):
-        ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+    def interpolate_ball_positions(self, ball_positions):
+        ball_positions_bbox = [x.get(1, {}).get('bbox', []) for x in ball_positions]
+        ball_positions_transformed = [
+            x.get(1, {}).get('position_transformed', [None, None]) for x in ball_positions
+        ]
 
-        # Interpolate missing values
-        df_ball_positions = df_ball_positions.interpolate()
-        df_ball_positions = df_ball_positions.bfill()
+        df_ball_positions_bbox = pd.DataFrame(ball_positions_bbox, columns=['x1', 'y1', 'x2', 'y2']).interpolate().bfill()
+        df_ball_positions_transformed = pd.DataFrame(ball_positions_transformed, columns=['x_trans', 'y_trans']).interpolate().bfill()
 
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
+        ball_positions = [
+            {
+                1: {
+                    "bbox": bbox_row.tolist(),
+                    "position_transformed": transformed_row.tolist()
+                }
+            }
+            for bbox_row, transformed_row in zip(df_ball_positions_bbox.to_numpy(), df_ball_positions_transformed.to_numpy())
+        ]
 
         return ball_positions
+
 
     def detect_frames(self, frames):
         batch_size=20 
@@ -215,3 +241,4 @@ class Tracker:
             output_video_frames.append(frame)
 
         return output_video_frames
+    

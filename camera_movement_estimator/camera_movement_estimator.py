@@ -29,14 +29,25 @@ class CameraMovementEstimator():
             mask = mask_features
         )
 
-    def add_adjust_positions_to_tracks(self,tracks, camera_movement_per_frame):
+    def add_adjust_positions_to_tracks(self, tracks, camera_movement_per_frame):
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
                 for track_id, track_info in track.items():
                     position = track_info['position']
                     camera_movement = camera_movement_per_frame[frame_num]
-                    position_adjusted = (position[0]-camera_movement[0],position[1]-camera_movement[1])
+
+                    # Flatten position if it's nested
+                    if isinstance(position[0], list):
+                        position = [p[0] for p in position]
+
+                    # Ensure camera movement is valid
+                    if not isinstance(camera_movement, (list, tuple)) or len(camera_movement) != 2:
+                        raise ValueError(f"Invalid camera movement: {camera_movement}")
+
+                    # Calculate adjusted position
+                    position_adjusted = (position[0] - camera_movement[0], position[1] - camera_movement[1])
                     tracks[object][frame_num][track_id]['position_adjusted'] = position_adjusted
+
                     
 
 

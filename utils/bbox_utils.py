@@ -14,3 +14,7 @@ def measure_xy_distance(p1,p2):
 def get_foot_position(bbox):
     x1,y1,x2,y2 = bbox
     return int((x1+x2)/2),int(y2)
+
+def get_bbox_height(bbox):
+    x1,y1,x2,y2 = bbox
+    return int(y2-y1)
