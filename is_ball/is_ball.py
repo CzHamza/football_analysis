@@ -48,7 +48,7 @@ class IsBall:
 
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         object_mask = hsv_frame[y1:y2, x1:x2]
-        lower_ball_color = self.get_ball_color(frame, object_bbox) #np.array([255, 255, 255])
+        lower_ball_color = self.get_ball_color(frame, object_bbox) 
         upper_ball_color = self.get_ball_color(frame, object_bbox)
         ball_mask = cv2.inRange(object_mask, lower_ball_color, upper_ball_color)
         return cv2.countNonZero(ball_mask) > 0
@@ -61,4 +61,4 @@ class IsBall:
         if self._filter_by_color(frame, ball_bbox):
             score += 1
 
-        return score >= 1
+        return score > 1
