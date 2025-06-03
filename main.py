@@ -19,19 +19,19 @@ def main():
     video_frames = read_video('input_videos/08fd33_4.mp4')
 
     # Initialize Tracker
-    tracker = Tracker('models/yolov8.pt')
+    tracker = Tracker('models/best.pt')
 
     tracks = tracker.get_object_tracks(video_frames,
-                                       read_from_stub=False,
-                                       stub_path='stubs/track_stubs_08fd33_4.pkl')
+                                       read_from_stub=True,
+                                       stub_path='stubs/track_stubs_08fd33_4_demo.pkl')
     # Get object positions with kalman filter
     tracker.add_position_to_tracks(tracks)
 
     # camera movement estimator
     camera_movement_estimator = CameraMovementEstimator(video_frames[0])
     camera_movement_per_frame = camera_movement_estimator.get_camera_movement(video_frames,
-                                                                                read_from_stub=False,
-                                                                                stub_path='stubs/camera_movement_stub_bayernv2.pkl')
+                                                                                read_from_stub=True,
+                                                                                stub_path='stubs/camera_movement_stub_08fd33_4_demo.pkl')
     camera_movement_estimator.add_adjust_positions_to_tracks(tracks,camera_movement_per_frame)
 
 
@@ -212,7 +212,7 @@ def main():
 
 
     # Save video
-    save_video(output_video_frames, 'output_videos/08fd33_4_v9.avi')
+    save_video(output_video_frames, 'output_videos/08fd33_4_v2_1.avi')
 
 if __name__ == '__main__':
     main()
